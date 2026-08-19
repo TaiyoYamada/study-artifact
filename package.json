@@ -50,7 +50,8 @@
 		"node": ">=22"
 	},
 	"simple-git-hooks": {
-		"pre-commit": "npx lint-staged"
+		"pre-commit": "npx lint-staged",
+		"pre-push": "npm run test:unit"
 	},
 	"lint-staged": {
 		"*.{js,ts,svelte,css,json,html}": [
