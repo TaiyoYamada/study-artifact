@@ -117,17 +117,37 @@ static/                    favicon と Temml のフォント
 ## デプロイ
 
 事前生成した `build/` を静的配信するだけなので、どのホストでも動く。
+既定では **CI を通過したその成果物**を Cloudflare Pages へ公開する。
+検査したものと配信されるものが同じになるよう、公開用に再ビルドはしない。
 
-**Cloudflare Pages（Git 連携）** — ダッシュボードでリポジトリを繋ぎ、
-ビルドコマンド `npm run build`、出力ディレクトリ `build` を指定する。
-この場合 `.github/workflows/deploy.yml` は不要なので削除してよい。
+### Cloudflare 側でやること
 
-**Cloudflare Pages（GitHub Actions）** — リポジトリの Secrets に
-`CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を登録すると、
-`main` への push で `.github/workflows/deploy.yml` が公開する。
-プロジェクト名は変数 `CLOUDFLARE_PROJECT_NAME` で変えられる。
+1. **API トークンを作る** — ダッシュボード右上のアイコン → Profile → API Tokens →
+   Create Token → Custom token。権限は 1 つだけでよい:
+   **Account / Cloudflare Pages / Edit**。生成後は再表示できないので控えておく。
+2. **Account ID を控える** — Workers & Pages のページ右側に出ている。
+3. **Pages プロジェクトを 1 つ作る** — Workers & Pages → Create application → Pages →
+   Direct Upload。名前は `study-notes`（変えるなら次の手順で変数を設定する）。
+
+### GitHub 側でやること
+
+Settings → Secrets and variables → Actions で登録する。
+
+| 種別   | 名前                      | 中身                                               |
+| ------ | ------------------------- | -------------------------------------------------- |
+| Secret | `CLOUDFLARE_API_TOKEN`    | 上で作ったトークン                                 |
+| Secret | `CLOUDFLARE_ACCOUNT_ID`   | 上で控えたアカウント ID                            |
+| 変数   | `CLOUDFLARE_PROJECT_NAME` | Pages のプロジェクト名（任意。既定 `study-notes`） |
+
+登録するまでの間、公開ジョブは**失敗ではなく通知付きのスキップ**になる。
+
+### 他のホストを使う場合
 
 **Vercel** — フレームワークプリセットに SvelteKit を選び、出力ディレクトリは `build`。
+
+**Cloudflare の Git 連携** — ダッシュボードでリポジトリを繋ぎ、
+ビルドコマンド `npm run build`、出力ディレクトリ `build`、環境変数 `NODE_VERSION=22`。
+この場合 Cloudflare 側はテストを走らせないので、公開がテスト通過に紐づかなくなる点に注意。
 
 サブパス配信（`example.com/notes/` など）にする場合は、`vite.config.ts` の
 `paths.base` を設定する。
@@ -135,7 +155,8 @@ static/                    favicon と Temml のフォント
 ## CI
 
 `.github/workflows/ci.yml` が push と pull request で
-Prettier → ESLint → svelte-check → Vitest → Playwright を通す。
+Prettier → ESLint → svelte-check → Vitest → Playwright を通し、
+`main` への push なら**そのすべてが通ったときだけ**公開ジョブへ進む。
 コミット時には lint-staged が変更ファイルだけを整形する
 （`npm run hooks:install` で有効化。`npm install` 時に自動で入る）。
 

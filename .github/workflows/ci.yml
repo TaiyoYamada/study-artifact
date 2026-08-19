@@ -55,9 +55,54 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # この成果物をそのまま公開する。検査を通ったものと配信されるものを一致させる。
       - name: 成果物を残す
         uses: actions/upload-artifact@v7
         with:
           name: site
           path: build/
           retention-days: 7
+
+  deploy:
+    name: Cloudflare Pages へ公開
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ steps.publish.outputs.deployment-url }}
+
+    steps:
+      # Secrets が未登録のうちは、失敗させずに飛ばす。設定前から赤くし続けないため。
+      - name: 資格情報の有無を見る
+        id: creds
+        env:
+          API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$API_TOKEN" ] && [ -n "$ACCOUNT_ID" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::CLOUDFLARE_API_TOKEN と CLOUDFLARE_ACCOUNT_ID が未登録のため、公開を飛ばしました。設定手順は README を参照してください。'
+          fi
+
+      - name: 検査を通った成果物を取り出す
+        if: steps.creds.outputs.ready == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: build
+
+      - name: 公開
+        id: publish
+        if: steps.creds.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy build
+            --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'study-notes' }}
+            --branch=${{ github.ref_name }}
