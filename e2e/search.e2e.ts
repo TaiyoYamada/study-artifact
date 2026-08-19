@@ -4,13 +4,13 @@ import { openSidebar, searchFor } from './helpers';
 test('検索でノートを絞り込み、開ける', async ({ page }) => {
 	await page.goto('/');
 	await openSidebar(page);
-	await searchFor(page, 'SPSA');
+	await searchFor(page, '探索と活用');
 
 	const results = page.locator('.result');
 	await expect(results.first()).toBeVisible();
 
 	await results.first().click();
-	await expect(page).toHaveURL(/spsa-implementation/);
+	await page.waitForURL((url) => decodeURIComponent(url.pathname).endsWith('/探索と活用'));
 });
 
 test('一致が無いときはその旨を出す', async ({ page }) => {

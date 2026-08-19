@@ -39,6 +39,11 @@ jobs:
       - name: 単体テスト
         run: npm run test:unit
 
+      # ノートに書いた出典が実在するかを機械で確かめる。
+      # 存在しない論文 URL が混ざったまま公開されないようにするための歯止め。
+      - name: 出典リンクの生存確認
+        run: npm run check:links -- --all
+
       # e2e は build + preview に対して走るので、ここでビルドの通過も同時に確かめている
       - name: Playwright のブラウザを用意
         run: npx playwright install --with-deps chromium

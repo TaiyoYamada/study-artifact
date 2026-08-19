@@ -5,11 +5,15 @@ test.describe('JavaScript が無い環境', () => {
 	test.use({ javaScriptEnabled: false });
 
 	test('本文が読める', async ({ page }) => {
-		await page.goto('/quantum-computing/vqa/spsa-implementation');
+		await page.goto('/最適化/最適化の基礎/探索と活用');
 
-		await expect(page.getByRole('heading', { level: 1 })).toContainText(
-			'Implementation of the Simultaneous Perturbation'
-		);
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('探索と活用');
+		await expect(page.getByRole('heading', { name: '参考文献' })).toBeVisible();
+	});
+
+	test('数式が読める', async ({ page }) => {
+		await page.goto('/最適化/最適化の基礎/最適化問題');
+
 		await expect(page.locator('.prose math').first()).toBeVisible();
 	});
 
@@ -19,14 +23,15 @@ test.describe('JavaScript が無い環境', () => {
 
 		await page
 			.getByRole('navigation', { name: 'ノート一覧' })
-			.getByRole('link', { name: '量子計算', exact: true })
+			.getByRole('link', { name: '最適化', exact: true })
 			.click();
 
-		await expect(page).toHaveURL('/quantum-computing');
+		await page.waitForURL((url) => decodeURIComponent(url.pathname) === '/最適化');
 	});
 
 	test('階層の開閉が <details> だけで動く', async ({ page }) => {
-		await page.goto('/');
+		// ツリーは現在地の周辺だけを出すので、開閉できる枝があるページで確かめる
+		await page.goto('/最適化');
 		await openSidebar(page);
 
 		const branch = page.locator('details').first();
@@ -35,6 +40,27 @@ test.describe('JavaScript が無い環境', () => {
 		// リンク部分は移動用なので、キャレット側を押して開閉する
 		await branch.locator('> summary').click({ position: { x: 8, y: 12 } });
 		await expect(branch).not.toHaveAttribute('open', '');
+	});
+});
+
+test.describe('ナビゲーションの刈り込み', () => {
+	test('ホームでは分野だけを出す', async ({ page }) => {
+		await page.goto('/');
+		await openSidebar(page);
+
+		const tree = page.getByRole('navigation', { name: 'ノート一覧' });
+		// 500 本すべてを埋め込まない。トップレベルの分野だけが並ぶ。
+		await expect(tree.locator('li')).toHaveCount(15);
+	});
+
+	test('階層に入るとその中身が開く', async ({ page }) => {
+		await page.goto('/最適化/最適化の基礎');
+		await openSidebar(page);
+
+		const tree = page.getByRole('navigation', { name: 'ノート一覧' });
+		await expect(tree.getByRole('link', { name: '探索と活用', exact: true })).toBeVisible();
+		// 遠い分野の中身までは出さない
+		await expect(tree.getByRole('link', { name: '線形代数', exact: true })).toHaveCount(0);
 	});
 });
 
@@ -60,7 +86,7 @@ test.describe('狭い画面', () => {
 	test.use({ viewport: { width: 390, height: 780 } });
 
 	test('サイドバーはドロワーとして開閉する', async ({ page }) => {
-		await page.goto('/quantum-computing/vqa');
+		await page.goto('/最適化');
 
 		const tree = page.getByRole('navigation', { name: 'ノート一覧' });
 		await expect(tree).not.toBeInViewport();
@@ -74,12 +100,12 @@ test.describe('狭い画面', () => {
 
 	test('ノートを開くとドロワーは閉じる', async ({ page }) => {
 		await page.goto('/');
-		await page.getByLabel('ノート一覧を開く').click();
+		await openSidebar(page);
 
 		const tree = page.getByRole('navigation', { name: 'ノート一覧' });
-		await tree.getByRole('link', { name: '量子計算', exact: true }).click();
+		await tree.getByRole('link', { name: '最適化', exact: true }).click();
 
-		await expect(page).toHaveURL('/quantum-computing');
+		await page.waitForURL((url) => decodeURIComponent(url.pathname) === '/最適化');
 		await expect(tree).not.toBeInViewport();
 	});
 });

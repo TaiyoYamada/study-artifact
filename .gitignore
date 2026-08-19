@@ -21,3 +21,4 @@ blob-report/
 # OS / editor
 .DS_Store
 *.local
+.cache/

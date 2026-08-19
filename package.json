@@ -17,7 +17,8 @@
 		"test:e2e": "playwright test",
 		"test": "npm run test:unit && npm run test:e2e",
 		"verify": "npm run lint && npm run check && npm run test",
-		"hooks:install": "simple-git-hooks"
+		"hooks:install": "simple-git-hooks",
+		"check:links": "node scripts/check-links.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

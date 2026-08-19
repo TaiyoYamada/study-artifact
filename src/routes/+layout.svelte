@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { domainHue } from '$lib/domains';
 	import NavTree from '$lib/components/NavTree.svelte';
 	import SearchBox from '$lib/components/SearchBox.svelte';
 	import SearchResults from '$lib/components/SearchResults.svelte';
@@ -14,9 +15,11 @@
 
 	const home = resolve('/');
 	// /quantum-computing/vqa → quantum-computing/vqa
-	const currentSlug = $derived(
-		page.url.pathname.startsWith(home) ? page.url.pathname.slice(home.length) : ''
-	);
+	// pathname は percent-encode されているので、slug と比べる前に戻す
+	const currentSlug = $derived.by(() => {
+		const pathname = decodeURIComponent(page.url.pathname);
+		return pathname.startsWith(home) ? pathname.slice(home.length) : '';
+	});
 	const currentTitle = $derived(page.data.note?.title ?? data.site.title);
 
 	// ドロワーの開閉は :target だけで成立する (JavaScript 無しでも開ける) が、
@@ -30,11 +33,14 @@
 		hydrated = true;
 	});
 	const drawerOpen = $derived(page.url.hash === '#nav');
+
+	// いまどの分野にいるかを色相として下ろす。現在地の手がかりとして使う。
+	const hue = $derived(domainHue(currentSlug));
 </script>
 
 <a class="skip" href="#doc">本文へスキップ</a>
 
-<div class="app">
+<div class="app" style="--domain-h: {hue}">
 	<!--
 		狭い画面ではドロワーになる。開閉は :target で行うので JavaScript を要さない。
 		ノートへ移動すると URL からハッシュが外れ、自然に閉じる。

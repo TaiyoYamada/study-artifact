@@ -18,11 +18,6 @@ function childrenOf(slug: string, node: NavNode): NavNode[] | null {
 	return null;
 }
 
-function countNotes(node: NavNode): number {
-	if (node.kind === 'note') return 1;
-	return (node.hasPage ? 1 : 0) + node.children.reduce((sum, child) => sum + countNotes(child), 0);
-}
-
 export const load: PageServerLoad = ({ params }) => {
 	const slug = params.slug.replace(/^\/+|\/+$/g, '');
 	const { notes, nav, reading } = loadNotes();
@@ -41,6 +36,18 @@ export const load: PageServerLoad = ({ params }) => {
 
 	const children = childrenOf(slug, nav as NavSection) ?? [];
 
+	// その階層に何本あって、何本書けているか。未執筆が多いので進み具合を示す。
+	const progress = (prefix: string) => {
+		let total = 0;
+		let written = 0;
+		for (const [candidate, entry] of notes) {
+			if (candidate !== prefix && !candidate.startsWith(`${prefix}/`)) continue;
+			total++;
+			if (entry.status !== '未執筆') written++;
+		}
+		return { total, written };
+	};
+
 	return {
 		note,
 		previous: brief(previousSlug),
@@ -49,9 +56,10 @@ export const load: PageServerLoad = ({ params }) => {
 			kind: child.kind,
 			slug: child.slug,
 			title: child.title,
-			// セクションは中に何本あるかを添える。ノートは自分自身なので出さない。
-			count: child.kind === 'section' ? countNotes(child) : 0,
-			linkable: child.kind === 'note' || child.hasPage
+			summary: notes.get(child.slug)?.summary ?? '',
+			draft: (notes.get(child.slug)?.status ?? '') === '未執筆',
+			linkable: child.kind === 'note' || child.hasPage,
+			...progress(child.slug)
 		}))
 	};
 };

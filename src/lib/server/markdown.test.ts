@@ -131,6 +131,15 @@ describe('リンク', () => {
 		expect(html).toContain('href="/quantum-computing"');
 	});
 
+	it('表の中で \\| と書いたリンクでもリンク先を壊さない', () => {
+		const { html } = render(
+			'| 手法 | 説明 |\n| --- | --- |\n| [[quantum-computing/vqa/spsa\\|SPSA]] | 勾配近似 |\n'
+		);
+
+		expect(html).toContain('href="/quantum-computing/vqa/spsa"');
+		expect(html).toContain('>SPSA</a>');
+	});
+
 	it('外部リンクは新しいタブで開く', () => {
 		const { html } = render('[arXiv](https://arxiv.org/abs/2506.01715)');
 

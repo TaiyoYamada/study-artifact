@@ -44,6 +44,10 @@ export interface NavSection {
 	/** その階層自身に index.md があるか。無ければ見出しとしてだけ存在する。 */
 	hasPage: boolean;
 	children: NavNode[];
+	/** 配下にある項目の総数。刈り込んだ枝でも件数だけは示せるように。 */
+	count?: number;
+	/** 現在地から遠いので children を落としてある、という印。 */
+	truncated?: boolean;
 }
 
 export type NavNode = NavNote | NavSection;

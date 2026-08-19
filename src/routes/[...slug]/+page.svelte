@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { domainHue } from '$lib/domains';
 	import type { PageData } from './$types';
 
 	const { data }: { data: PageData } = $props();
@@ -132,20 +133,39 @@
 
 		{#if data.children.length}
 			<div class="children">
-				<p class="children-head">この階層のノート</p>
-				{#each data.children as child (child.slug)}
-					{#if child.linkable}
-						<a class="child" href={resolve('/[...slug]', { slug: child.slug })}>
-							<span class="child-name">{child.title}</span>
-							{#if child.count}<span class="child-kind">{child.count} notes</span>{/if}
-						</a>
-					{:else}
-						<div class="child">
-							<span class="child-name">{child.title}</span>
-							{#if child.count}<span class="child-kind">{child.count} notes</span>{/if}
-						</div>
-					{/if}
-				{/each}
+				<p class="children-head">
+					{note.slug ? 'この階層のノート' : '分野'}
+				</p>
+				<div class="children-grid">
+					{#each data.children as child (child.slug)}
+						{@const done = child.total ? Math.round((child.written / child.total) * 100) : 0}
+						<svelte:element
+							this={child.linkable ? 'a' : 'div'}
+							class="child"
+							href={child.linkable ? resolve('/[...slug]', { slug: child.slug }) : undefined}
+							style={child.kind === 'section' && !note.slug
+								? `--domain-h: ${domainHue(child.slug)}`
+								: undefined}
+						>
+							<span class="child-top">
+								<span class="child-name">{child.title}</span>
+								{#if child.total > 1}
+									<span class="child-count">{child.written} / {child.total}</span>
+								{:else if child.draft}
+									<span class="child-count">未執筆</span>
+								{/if}
+							</span>
+
+							{#if child.summary}
+								<span class="child-summary">{child.summary}</span>
+							{/if}
+
+							{#if child.total > 1}
+								<span class="child-bar"><span style="width: {done}%"></span></span>
+							{/if}
+						</svelte:element>
+					{/each}
+				</div>
 			</div>
 		{/if}
 

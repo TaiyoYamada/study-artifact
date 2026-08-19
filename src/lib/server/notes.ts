@@ -23,8 +23,10 @@ function splitOrder(name: string): { order: number | null; rest: string } {
 		: { order: null, rest: name };
 }
 
+// 大文字小文字はそのまま残す。CMA-ES や QUBO をディレクトリ名どおりに
+// 書けたほうが、手書きのノート間リンクがずれにくい。
 function slugify(name: string): string {
-	return splitOrder(name).rest.toLowerCase().replace(/\s+/g, '-');
+	return splitOrder(name).rest.replace(/\s+/g, '-');
 }
 
 function titleize(name: string): string {
@@ -241,6 +243,17 @@ export function loadNotes(): NotesData {
 	const reading: string[] = [];
 	flattenReading(node, reading);
 
+	// ノート間リンクの綴り違いはビルドを止める。500 本規模だと手書きの
+	// [[...]] は必ずずれるので、機械に照合させて候補まで出す。
+	const broken = findBrokenLinks(state.notes);
+	if (broken.length > 0) {
+		const lines = broken.map((b) => {
+			const hint = suggest(b.target, [...state.notes.keys()]);
+			return `  ${b.from || '(ホーム)'} → ${b.target}${hint ? `\n      もしかして: ${hint}` : ''}`;
+		});
+		throw new Error(`ノート間リンクの参照先が見つかりません:\n${lines.join('\n')}`);
+	}
+
 	if (state.mathErrors.length > 0) {
 		for (const error of state.mathErrors) {
 			console.warn(`[math] ${error.note}: ${error.tex}\n       ${error.message}`);
@@ -255,6 +268,62 @@ export function loadNotes(): NotesData {
 		mathErrors: state.mathErrors
 	};
 	return cache;
+}
+
+/** 本文中のサイト内リンクを拾い、実在しない参照先を挙げる。 */
+function findBrokenLinks(notes: Map<string, Note>): { from: string; target: string }[] {
+	const broken: { from: string; target: string }[] = [];
+
+	for (const [slug, note] of notes) {
+		for (const match of note.html.matchAll(/href="\/([^"#?]*)"/g)) {
+			const target = decodeURIComponent(match[1] ?? '').replace(/\/+$/, '');
+			if (target === '' || notes.has(target)) continue;
+			if (broken.some((b) => b.from === slug && b.target === target)) continue;
+			broken.push({ from: slug, target });
+		}
+	}
+
+	return broken;
+}
+
+/** 綴り違いを直しやすいよう、末尾の語が一致する候補を挙げる。 */
+function suggest(target: string, slugs: string[]): string {
+	const leaf = target.split('/').at(-1)?.toLowerCase() ?? '';
+	if (!leaf) return '';
+	const hits = slugs.filter((slug) => slug.split('/').at(-1)?.toLowerCase() === leaf);
+	return hits.slice(0, 3).join(', ');
+}
+
+/** その節の配下にある項目数。刈り込んだ枝の規模を示すのに使う。 */
+function countAll(node: NavNode): number {
+	if (node.kind === 'note') return 1;
+	return (node.hasPage ? 1 : 0) + node.children.reduce((sum, child) => sum + countAll(child), 0);
+}
+
+/**
+ * ナビゲーションを現在地の周辺だけに刈り込む。
+ *
+ * 500 を超えるノートの木をそのまま全ページに埋めると、1 ページあたり
+ * 数百 KB になってしまう。現在地までの道筋とその兄弟だけを残し、
+ * 遠い枝は「入口」だけ置く。どの節にも index.md があるので、
+ * 入口をたどれば JavaScript 無しでも先へ進める。
+ */
+export function pruneNav(node: NavSection, slug: string): NavSection {
+	const onPath = (target: string) => target === slug || slug.startsWith(`${target}/`);
+
+	return {
+		...node,
+		children: node.children.map((child) => {
+			if (child.kind === 'note') return child;
+			if (onPath(child.slug)) return pruneNav(child, slug);
+			return {
+				...child,
+				children: [],
+				count: countAll(child) - (child.hasPage ? 1 : 0),
+				truncated: child.children.length > 0
+			};
+		})
+	};
 }
 
 /** 事前生成の対象となる全 URL。SvelteKit の entries() に渡す。 */

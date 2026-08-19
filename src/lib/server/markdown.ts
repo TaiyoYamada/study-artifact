@@ -75,10 +75,7 @@ function renderMath(tex: string, display: boolean, errors: MathError[]): string 
 
 /** `01-` のような並び順プレフィックスを外して slug 断片にする。 */
 export function slugifySegment(name: string): string {
-	return name
-		.replace(/^\d+[-_.]\s*/, '')
-		.toLowerCase()
-		.replace(/\s+/g, '-');
+	return name.replace(/^\d+[-_.]\s*/, '').replace(/\s+/g, '-');
 }
 
 export function renderMarkdown(source: string, ctx: RenderContext): RenderResult {
@@ -113,10 +110,17 @@ export function renderMarkdown(source: string, ctx: RenderContext): RenderResult
 	);
 
 	// [[slug]] / [[slug|表示名]] でノート間リンク
-	s = s.replace(/\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (_all, target: string, label?: string) => {
-		const t = target.trim().replace(/^\/+|\/+$/g, '');
-		return `[${(label ?? t).trim()}](${noteHref(t)})`;
-	});
+	s = s.replace(
+		/\[\[([^\]|]+?)(?:\\?\|([^\]]+?))?\]\]/g,
+		(_all, target: string, label?: string) => {
+			// 表の中では区切りの | を \| と書く必要があるため、末尾の \ を落とす
+			const t = target
+				.trim()
+				.replace(/\\+$/, '')
+				.replace(/^\/+|\/+$/g, '');
+			return `[${(label ?? t).trim()}](${noteHref(t)})`;
+		}
+	);
 
 	let html = await0(marked.parse(s, { gfm: true, breaks: false }));
 
