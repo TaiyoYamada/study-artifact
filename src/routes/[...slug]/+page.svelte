@@ -7,7 +7,7 @@
 
 	const note = $derived(data.note);
 
-	const isDone = $derived(/読了|done|完了|read/i.test(note.status));
+	const isDone = $derived(/読了|執筆済|完了|done|read/i.test(note.status));
 	const hasToc = $derived(note.toc.length > 1);
 
 	let article = $state<HTMLElement | null>(null);
