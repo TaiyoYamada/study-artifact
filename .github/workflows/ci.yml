@@ -66,7 +66,10 @@ jobs:
   deploy:
     name: Cloudflare Pages へ公開
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # コミット無しでも公開し直せるよう workflow_dispatch でも動かす
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
