@@ -14,3 +14,7 @@ bun.lockb
 
 # ベンダーから取り込んだ CSS
 /src/temml.css
+
+# ライセンス原文は一字も変えない
+/LICENSE
+/notes/LICENSE

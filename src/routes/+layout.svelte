@@ -62,7 +62,14 @@
 		{/if}
 
 		<div class="nav-foot">
-			<span>{data.site.author}</span>
+			<!-- AGPL の下では、改変版をネットワーク越しに提供する者もソースを
+			     提供する必要がある。その導線をサイト自身に置いておく。 -->
+			<span class="nav-foot-meta">
+				{data.site.author}
+				{#if data.site.repository}
+					· <a href={data.site.repository} target="_blank" rel="noopener">Source</a>
+				{/if}
+			</span>
 			<ThemeToggle />
 		</div>
 	</aside>
