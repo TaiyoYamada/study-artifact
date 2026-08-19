@@ -41,7 +41,7 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
-		"marked": "^15.0.7",
+		"marked": "^18.0.9",
 		"temml": "^0.13.4"
 	},
 	"engines": {
