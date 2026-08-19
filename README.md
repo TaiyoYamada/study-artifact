@@ -1,118 +1,142 @@
-# Paper Survey
+# Study Notes
 
-量子コンピューティング・量子アルゴリズム・機械学習に関するサーベイをまとめたリポジトリです.
+読んだ論文と勉強した内容を、`notes/` のディレクトリ構造そのままの階層で残すためのサイト。
+SvelteKit で全ページを事前生成し、静的配信する。
 
-## Abstract
+```
+notes/01-quantum-computing/01-vqa/01-spsa-implementation.md
+  ↓ ビルド
+/quantum-computing/vqa/spsa-implementation
+```
 
-- これは読んだ論文をサーベイ時の時系列順にまとめたものです.
-- 日記のように, 読んだ論文の概要と感想を記録しています.
-- 対象分野としては, 量子コンピューティング・量子アルゴリズム・機械学習を中心に, 幅広い関連分野の論文を扱っています.
+## 使い方
 
+```bash
+npm install
+npm run dev        # http://localhost:5173  notes/ を書き換えると即反映される
+```
 
-## Main Interest
+### ノートを増やす
 
-- Quantum Computing
-- Quantum Algorithms
-- Quantum Machine Learning
-- Machine Learning
-- Optimization
-- Statistical Learning Theory
-- Deep Learning Theory
+`notes/` の好きな深さに `.md` を置くだけ。
 
+```bash
+cp templates/note.md notes/01-quantum-computing/01-vqa/04-新しい論文.md
 
+mkdir notes/02-machine-learning
+cp templates/index.md notes/02-machine-learning/index.md
+```
 
-## Main Conferences & Journals
+決まりごとは 3 つだけ。
 
-### 量子コンピューティング
+| 規則                | 意味                                                  |
+| ------------------- | ----------------------------------------------------- |
+| ディレクトリ = 階層 | ネストがそのままサイドバーのツリーと URL になる       |
+| `index.md`          | そのディレクトリ自身のページ。URL に `index` は出ない |
+| 先頭の `01-`        | 並び順のためだけのもの。URL にもタイトルにも出ない    |
 
-| 略称 | 正式名称 |
-|------|----------|
-| QIP | Conference on Quantum Information Processing |
-| TQC | Conference on the Theory of Quantum Computation, Communication and Cryptography |
-| IEEE Quantum Week | IEEE International Conference on Quantum Computing and Engineering |
-| PRX Quantum | Physical Review X Quantum |
-| npj Quantum Information | npj Quantum Information |
-| Quantum | Quantum |
-| Quantum Sci. Technol. | Quantum Science and Technology |
+`_` で始まるファイルとディレクトリは下書き扱いで、ビルドに含まれない。
 
-### 機械学習 (理論寄り)
+### frontmatter
 
-| 略称 | 正式名称 |
-|------|----------|
-| ICML | International Conference on Machine Learning |
-| NeurIPS | Advances in Neural Information Processing Systems |
-| ICLR | International Conference on Learning Representations |
-| AISTATS | International Conference on Artificial Intelligence and Statistics |
-| JMLR | Journal of Machine Learning Research |
-| COLT | Annual Conference on Computational Learning Theory |
-| UAI | Conference on Uncertainty in Artificial Intelligence |
+すべて任意。書いたものだけがノート冒頭のチップとして出る。
 
-### 機械学習 (応用寄り)
+```yaml
+---
+title: 論文タイトル # 省略時は本文先頭の h1、それも無ければファイル名
+status: 読了 # 「読了/done/完了」を含むと緑、それ以外は橙
+date: 2026-03-07
+source: IEEE TRANS. AEROSPACE AND ELECTRONIC SYSTEMS, 1998年
+cite: Spall, 1998
+tags: [SPSA, 確率的最適化]
+summary: 1〜2 文の要約。ノート冒頭と、親階層の一覧に出る
+order: 10 # ファイル名の番号より優先される
+---
+```
 
-| 略称 | 正式名称 |
-|------|----------|
-| KDD | ACM SIGKDD Conference on Knowledge Discovery and Data Mining |
-| AAAI | AAAI Conference on Artificial Intelligence |
-| IJCAI | International Joint Conference on Artificial Intelligence |
+### 本文に書けるもの
 
-### 和文
+- **数式** — `$a_k = a/(A+k+1)^\alpha$` と `$$ … $$`。ビルド時に MathML へ変換するので、閲覧側に JavaScript もフォントの追加ダウンロードも要らない。リテラルのドル記号は `\$`。
+- **ノート間リンク** — `[[quantum-computing/vqa/spsa-implementation]]`、表示名を変えるなら `[[slug|SPSA]]`。相対 `.md` リンクも解決される。
+- **コード** — 言語を書くと色が付く（python / clike 系 / bash / json / yaml / sql / diff とその別名）。
+- **callout** — `> [!note] 見出し`。note / tip / important / warning / caution / todo / question。
+- 表・脚注・チェックリストなど GitHub Markdown はそのまま通る。
 
-| 略称 | 正式名称 |
-|------|----------|
-| JSAI | 人工知能学会全国大会 (Japanese Society for Artificial Intelligence) |
-| IBIS | 情報論的学習理論ワークショップ (Information-Based Induction Sciences Workshop) |
+## コマンド
 
-### Web
+| コマンド            | 内容                                            |
+| ------------------- | ----------------------------------------------- |
+| `npm run dev`       | 開発サーバー                                    |
+| `npm run build`     | `build/` に全ページを事前生成                   |
+| `npm run preview`   | 生成結果をローカルで配信                        |
+| `npm run lint`      | Prettier の検査 + ESLint                        |
+| `npm run format`    | Prettier で整形                                 |
+| `npm run check`     | svelte-check による型検査                       |
+| `npm run test:unit` | Vitest（Markdown パイプラインと階層の組み立て） |
+| `npm run test:e2e`  | Playwright（build + preview に対して実行）      |
+| `npm run verify`    | 上の検査をまとめて実行。CI と同じ内容           |
 
-| 略称 | 正式名称 |
-|------|----------|
-| WWW | The Web Conference |
-| WSDM | ACM International Conference on Web Search and Data Mining |
+初回のみ `npx playwright install chromium` が必要。
 
-### 自然言語処理
+## 構成
 
-| 略称 | 正式名称 |
-|------|----------|
-| ACL | Annual Meeting of the Association for Computational Linguistics |
-| EMNLP | Conference on Empirical Methods in Natural Language Processing |
-| NAACL | Annual Conference of the North American Chapter of the ACL |
+```
+notes/                     Markdown。ここだけ触れば運用できる
+templates/                 ノートと階層のひな形
+src/
+├─ app.css                 デザイン。配色・タイポグラフィはここの CSS 変数
+├─ temml.css               Temml (LaTeX → MathML) 付属のスタイル
+├─ lib/
+│  ├─ search.ts            絞り込みとスコアリング（純粋関数）
+│  ├─ search.svelte.ts     検索欄と結果一覧で共有する状態
+│  ├─ components/          ツリー・検索・テーマ切替
+│  └─ server/              ビルド時にだけ動く。クライアントには入らない
+│     ├─ frontmatter.ts    `---` ブロックの読み取り
+│     ├─ highlight.ts      シンタックスハイライト
+│     ├─ markdown.ts       Markdown → HTML（数式・callout・リンク解決）
+│     └─ notes.ts          notes/ → 階層ツリー・検索インデックス
+└─ routes/
+   ├─ [...slug]/           全ノートがこの 1 ルートに載る
+   └─ search-index.json/   検索欄に触れたときだけ取得される
+static/                    favicon と Temml のフォント
+```
 
-### 画像処理
+依存は実行時 2 つ（`marked`、`temml`）だけ。どちらもビルド時にしか動かないので、
+閲覧側に届く JavaScript は SvelteKit のランタイムと自前のコードのみ。
 
-| 略称 | 正式名称 |
-|------|----------|
-| CVPR | IEEE/CVF Conference on Computer Vision and Pattern Recognition |
-| ICCV | IEEE/CVF International Conference on Computer Vision |
-| ECCV | European Conference on Computer Vision |
+### 設計上の決めごと
 
-### 最適化
+- **ツリーの開閉は `<details>`** に任せている。JavaScript を切っても階層を辿れる。
+  狭い画面のドロワーも `:target` で開くので同じく JavaScript を要さない
+  （クライアント遷移では `:target` が更新されないため、ハイドレーション後だけクラスで上書きしている）。
+- **検索インデックスは遅延取得**。初期表示の転送量に乗せない。
+- **数式はビルド時に MathML 化**。KaTeX と違いフォントを配らずに済む。
+- **`paths.relative: false`**。`{@html}` で差し込む本文中のリンクは相対化の対象外なので、
+  サイト全体を絶対パスに揃えてコンポーネント側と食い違わせない。
 
-| 略称 | 正式名称 |
-|------|----------|
-| Math. Program. | Mathematical Programming |
-| SIOPT | SIAM Journal on Optimization |
-| OR | Operations Research |
+## デプロイ
 
-### 統計
+事前生成した `build/` を静的配信するだけなので、どのホストでも動く。
 
-| 略称 | 正式名称 |
-|------|----------|
-| JRSS-B | Journal of the Royal Statistical Society: Series B |
-| Ann. Statist. | Annals of Statistics |
-| Biometrika | Biometrika |
-| JASA | Journal of the American Statistical Association |
+**Cloudflare Pages（Git 連携）** — ダッシュボードでリポジトリを繋ぎ、
+ビルドコマンド `npm run build`、出力ディレクトリ `build` を指定する。
+この場合 `.github/workflows/deploy.yml` は不要なので削除してよい。
 
-### 情報理論・物理
+**Cloudflare Pages（GitHub Actions）** — リポジトリの Secrets に
+`CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を登録すると、
+`main` への push で `.github/workflows/deploy.yml` が公開する。
+プロジェクト名は変数 `CLOUDFLARE_PROJECT_NAME` で変えられる。
 
-| 略称 | 正式名称 |
-|------|----------|
-| IEEE Trans. Inf. Theory | IEEE Transactions on Information Theory |
-| PRL | Physical Review Letters |
-| Nature Physics | Nature Physics |
+**Vercel** — フレームワークプリセットに SvelteKit を選び、出力ディレクトリは `build`。
 
+サブパス配信（`example.com/notes/` など）にする場合は、`vite.config.ts` の
+`paths.base` を設定する。
 
-## Attention
+## CI
 
-- 基本的に要約は個人的なメモであり, 誤りを含んでいる可能性があります. ご注意ください.
-- 図は各論文から引用させて頂いています.
+`.github/workflows/ci.yml` が push と pull request で
+Prettier → ESLint → svelte-check → Vitest → Playwright を通す。
+コミット時には lint-staged が変更ファイルだけを整形する
+（`npm run hooks:install` で有効化。`npm install` 時に自動で入る）。
 
+依存の更新は Dependabot が毎週 pull request を出す。

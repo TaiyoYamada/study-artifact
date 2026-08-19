@@ -1,10 +1,13 @@
+---
+title: Optimization Strategies for Variational Quantum Algorithms in Noisy Landscapes
+status: 読了
+date: 2026-03-15
+source: arXiv 2025年
+cite: novak2025optimization
+tags: [Variational Quantum Algorithms, VQE, Metaheuristic Optimization, CMA-ES, iL-SHADE, Noisy Landscapes, Barren Plateaus, NISQ]
+---
+
 # Optimization Strategies for Variational Quantum Algorithms in Noisy Landscapes
-
-**読了日:** 2026/03/15
-**学会・年:** arXiv 2025年
-**引用キー:** novak2025optimization
-
-**keywords:** Variational Quantum Algorithms, VQE, Metaheuristic Optimization, CMA-ES, iL-SHADE, Noisy Landscapes, Barren Plateaus, NISQ
 
 ## 論文情報
 

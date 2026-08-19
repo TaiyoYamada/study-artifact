@@ -1,10 +1,13 @@
+---
+title: Implementation of the Simultaneous Perturbation Algorithm for Stochastic Optimization
+status: 読了
+date: 2026-03-07
+source: IEEE TRANSACTIONS ON AEROSPACE AND ELECTRONIC SYSTEMS, 1998年
+cite: Spall, 1998
+tags: [同時摂動確率的近似 (SPSA), 確率的最適化, 勾配近似, ノイズ付き目的関数, 実装ガイド]
+---
+
 # Implementation of the Simultaneous Perturbation Algorithm for Stochastic Optimization
-
-**読了日:** 2026/03/07
-**学会・年:** IEEE TRANSACTIONS ON AEROSPACE AND ELECTRONIC SYSTEMS, 1998年
-**引用キー:** [Spall, 1998]
-
-**keywords:** 同時摂動確率的近似 (SPSA), 確率的最適化, 勾配近似, ノイズ付き目的関数, 実装ガイド
 
 ## 概要
 
@@ -48,4 +51,3 @@
 *   **1回測定（One-measurement）SPSA:** 連続的な適応制御など、システム動特性が急激に変化するリアルタイム環境では、1反復あたり1回の測定で勾配を近似する形式が有効な場合があります。
 *   **二次形式 SPSA (Second-order SPSA):** ニュートン・ラフソン法の確率的アナログであり、ヘッセ行列（二次導関数）もSPの手法で近似することで収束を加速させます。驚くべきことに、この手法もパラメータの次元数 $p$ に依存せず、**1反復あたりわずか4回の関数評価**で勾配とヘッセ行列の両方を推定できます。
 *   **制約付き最適化と大域的最適化:** ペナルティ関数や射影アプローチを組み合わせることで、等式・不等式制約のある問題にも適用可能です。また、複数の局所解を持つ問題に対して、ステップサイズを段階的に減衰させることで大域的最小値を探索する手法も提案されています。
-

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 同じブランチへ続けて push したときは古い実行を打ち切る
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: lint / typecheck / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prettier と ESLint
+        run: npm run lint
+
+      - name: 型検査 (svelte-check)
+        run: npm run check
+
+      - name: 単体テスト
+        run: npm run test:unit
+
+      # e2e は build + preview に対して走るので、ここでビルドの通過も同時に確かめている
+      - name: Playwright のブラウザを用意
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E テスト
+        run: npm run test:e2e
+
+      - name: 失敗時のレポートを残す
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 成果物を残す
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: build/
+          retention-days: 7

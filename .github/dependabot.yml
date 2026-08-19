@@ -1,0 +1,27 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # SvelteKit まわりは足並みを揃えて上げたい
+      svelte:
+        patterns:
+          - svelte
+          - svelte-*
+          - '@sveltejs/*'
+      dev-dependencies:
+        dependency-type: development
+        exclude-patterns:
+          - svelte
+          - svelte-*
+          - '@sveltejs/*'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

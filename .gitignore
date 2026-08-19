@@ -1,1 +1,23 @@
+node_modules/
+
+# Output
+.svelte-kit/
+build/
+.vercel/
+.wrangler/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS / editor
 .DS_Store
+*.local

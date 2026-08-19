@@ -1,11 +1,13 @@
+---
+title: Benchmarking of Different Optimizers in the Variational Quantum Algorithms for Applications in Quantum Chemistry
+status: 読了
+date: 2026-02-20
+source: arXiv 2023年
+cite: singh2023benchmarking
+tags: [Variational Quantum Algorithms, Classical Optimizers, NISQ, Quantum Noise]
+---
+
 # Benchmarking of Different Optimizers in the Variational Quantum Algorithms for Applications in Quantum Chemistry
-
-**読了日:** 2026/02/20
-**学会・年:** arXiv 2023年
-**引用キー:** singh2023benchmarking
-
-**keywords:** Variational Quantum Algorithms，Classical Optimizers，NISQ，Quantum Noise
-
 
 **この論文の概要**
 本論文は、量子化学計算に応用される**変分量子アルゴリズム（VQA）において、古典的な最適化アルゴリズムがどのように機能するかを包括的にベンチマーク評価**した研究である。勾配ベース、勾配フリー、量子ハードウェア特化型の多様なオプティマイザを使用し、H2、LiH、BeH2、H2O、HFという5つの分子を対象にシミュレーションを行っている。理想的な量子シミュレータだけでなく、ショットノイズや**実際の量子デバイス（IBM Cairo）のノイズを含んだ現実的なシミュレーション**環境を用いて、基底状態エネルギー、解離エネルギー、双極子モーメントの計算精度と収束性を比較している。

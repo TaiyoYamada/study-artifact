@@ -1,0 +1,1270 @@
+/* ============================================================================
+   Study Notes — 「紙の上に置かれた計器盤」
+   周囲の UI (ツリー・検索・目次) は冷たいグレーの器具。読む領域だけが純白の紙。
+   読む面は Newsreader (可変セリフ)、操作する面は IBM Plex Sans で分ける。
+   ========================================================================= */
+
+:root {
+	/* ---- 白基調のパレット。中間色は accent 寄りにわずかに青を振ってある ---- */
+	--paper: #ffffff;
+	--shell: #f5f6f9;
+	--shell-2: #eceef4;
+	--rule: #e2e5ec;
+	--rule-soft: #edeff4;
+
+	--ink: #14161b;
+	--ink-2: #545b6a;
+	--ink-3: #8a90a0;
+
+	--accent: #27459a;
+	--accent-hover: #1a2f74;
+	--accent-soft: #e9eefa;
+	--accent-line: #c3cfeb;
+
+	--ok: #1b7a54;
+	--ok-soft: #e6f3ec;
+	--warn: #8a5b08;
+	--warn-soft: #faf0dd;
+	--mark: #ffeeb0;
+
+	--code-bg: #f7f8fb;
+	--t-comment: #808896;
+	--t-string: #1b7a54;
+	--t-keyword: #27459a;
+	--t-number: #9a5200;
+	--t-fn: #7a2e8f;
+	--t-meta: #9a5200;
+
+	--shadow-sheet: 0 1px 2px rgba(20, 22, 27, 0.04);
+
+	/* ---- タイポグラフィ ---- */
+	--font-read: 'Newsreader', 'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', Georgia, serif;
+	--font-ui:
+		'IBM Plex Sans', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', -apple-system, BlinkMacSystemFont,
+		sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+
+	--read-size: 1.0625rem; /* 17px — 和文セリフが潰れない下限 */
+	--read-lead: 1.85; /* 和文混じりは欧文より行間を要る */
+
+	/* ---- レイアウト ---- */
+	--nav-w: 17.5rem;
+	--toc-w: 12rem;
+	--sheet-w: 44rem;
+	--gutter: 3.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--paper: #15171c;
+		--shell: #101216;
+		--shell-2: #1c1f26;
+		--rule: #272b34;
+		--rule-soft: #1f232a;
+
+		--ink: #e7e9ee;
+		--ink-2: #a2a8b6;
+		--ink-3: #757c8b;
+
+		--accent: #93aef2;
+		--accent-hover: #b6c8f8;
+		--accent-soft: #1b2437;
+		--accent-line: #2f3d5e;
+
+		--ok: #58c79b;
+		--ok-soft: #14261f;
+		--warn: #d9a441;
+		--warn-soft: #271f11;
+		--mark: #5a4a12;
+
+		--code-bg: #191c22;
+		--t-comment: #79808f;
+		--t-string: #6fcfa0;
+		--t-keyword: #93aef2;
+		--t-number: #e0a265;
+		--t-fn: #c99be0;
+		--t-meta: #e0a265;
+
+		--shadow-sheet: none;
+	}
+}
+
+:root[data-theme='dark'] {
+	--paper: #15171c;
+	--shell: #101216;
+	--shell-2: #1c1f26;
+	--rule: #272b34;
+	--rule-soft: #1f232a;
+
+	--ink: #e7e9ee;
+	--ink-2: #a2a8b6;
+	--ink-3: #757c8b;
+
+	--accent: #93aef2;
+	--accent-hover: #b6c8f8;
+	--accent-soft: #1b2437;
+	--accent-line: #2f3d5e;
+
+	--ok: #58c79b;
+	--ok-soft: #14261f;
+	--warn: #d9a441;
+	--warn-soft: #271f11;
+	--mark: #5a4a12;
+
+	--code-bg: #191c22;
+	--t-comment: #79808f;
+	--t-string: #6fcfa0;
+	--t-keyword: #93aef2;
+	--t-number: #e0a265;
+	--t-fn: #c99be0;
+	--t-meta: #e0a265;
+
+	--shadow-sheet: none;
+}
+
+/* ------------------------------------------------------------------ 土台 */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--shell);
+	color: var(--ink);
+	font-family: var(--font-ui);
+	font-size: 16px;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+button,
+input {
+	font: inherit;
+	color: inherit;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 3px;
+}
+
+::selection {
+	background: var(--accent-soft);
+}
+
+.skip {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	z-index: 100;
+	background: var(--paper);
+	color: var(--accent);
+	padding: 0.6rem 1rem;
+	border: 1px solid var(--accent-line);
+}
+.skip:focus {
+	left: 0.5rem;
+	top: 0.5rem;
+}
+
+.app {
+	display: grid;
+	grid-template-columns: var(--nav-w) minmax(0, 1fr);
+	height: 100dvh;
+}
+
+/* ============================================================== 計器盤 (nav) */
+
+.nav {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	background: var(--shell);
+	border-right: 1px solid var(--rule);
+}
+
+.nav-head {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 1.25rem 1.125rem 1rem;
+	border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	text-decoration: none;
+	color: var(--ink);
+}
+.brand-title {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	letter-spacing: -0.005em;
+	line-height: 1.3;
+}
+.brand-count {
+	font-size: 0.6875rem;
+	font-weight: 450;
+	color: var(--ink-3);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.brand:hover .brand-title {
+	color: var(--accent);
+}
+
+.search {
+	position: relative;
+	display: flex;
+}
+.search input {
+	flex: 1;
+	min-width: 0;
+	padding: 0.4375rem 0.625rem;
+	padding-right: 2rem;
+	background: var(--paper);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	font-size: 0.8125rem;
+	color: var(--ink);
+}
+.search input::placeholder {
+	color: var(--ink-3);
+}
+.search input:focus {
+	border-color: var(--accent-line);
+	outline-offset: 1px;
+}
+.search input::-webkit-search-cancel-button {
+	-webkit-appearance: none;
+}
+.search-key {
+	position: absolute;
+	right: 0.5rem;
+	top: 50%;
+	transform: translateY(-50%);
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	color: var(--ink-3);
+	border: 1px solid var(--rule);
+	border-radius: 3px;
+	padding: 0 0.3125rem;
+	line-height: 1.4;
+	pointer-events: none;
+}
+.search input:focus ~ .search-key,
+.search input:not(:placeholder-shown) ~ .search-key {
+	opacity: 0;
+}
+
+/* ---- 階層ツリー。インデントの縦罫が階層そのものを表す ---- */
+
+.tree,
+.results {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 0.75rem 0.625rem 2rem;
+}
+.results {
+	display: block;
+}
+
+/* 開閉は <details> が担う。JavaScript が無くてもツリーを辿れる。 */
+
+.tree ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.tree li ul {
+	margin-left: 0.8125rem;
+	padding-left: 0.625rem;
+	border-left: 1px solid var(--rule);
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	border-radius: 5px;
+	padding-left: 1.125rem; /* キャレット 1 個ぶん。ノート行と見出し行の頭を揃える */
+}
+.row:hover {
+	background: var(--shell-2);
+}
+.row.is-active {
+	background: var(--accent-soft);
+}
+
+/* summary の既定マーカーを消し、自前のキャレットを描く */
+summary.row {
+	cursor: pointer;
+	list-style: none;
+	position: relative;
+}
+summary.row::-webkit-details-marker {
+	display: none;
+}
+
+summary.row::before {
+	content: '';
+	position: absolute;
+	left: 0.4375rem;
+	top: 50%;
+	width: 0;
+	height: 0;
+	border-left: 4.5px solid var(--ink-3);
+	border-top: 3.5px solid transparent;
+	border-bottom: 3.5px solid transparent;
+	transform: translateY(-50%);
+	transition: transform 0.14s ease;
+}
+details[open] > summary.row::before {
+	transform: translateY(-50%) rotate(90deg);
+}
+summary.row:hover::before {
+	border-left-color: var(--ink);
+}
+
+.row > a,
+.row > span.label {
+	flex: 1;
+	min-width: 0;
+	display: block;
+	padding: 0.3125rem 0.4375rem;
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	color: var(--ink-2);
+	text-decoration: none;
+	overflow-wrap: anywhere;
+}
+.row > span.label {
+	cursor: inherit;
+}
+
+/* セクション行のリンクは文字幅ぶんだけ。右の余白とキャレットは <details> の開閉に使う。 */
+summary.row > a {
+	flex: 0 1 auto;
+}
+.row.is-section > a,
+.row.is-section > span.label {
+	font-weight: 500;
+	color: var(--ink);
+}
+.row:hover > a {
+	color: var(--ink);
+}
+.row.is-active > a {
+	color: var(--accent);
+	font-weight: 500;
+}
+
+.nav-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem 0.5rem 1.125rem;
+	border-top: 1px solid var(--rule);
+	font-size: 0.6875rem;
+	color: var(--ink-3);
+	font-variant-numeric: tabular-nums;
+}
+
+.theme-btn {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	background: none;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	cursor: pointer;
+	color: var(--ink-3);
+}
+.theme-btn:hover {
+	color: var(--ink);
+	border-color: var(--rule);
+	background: var(--paper);
+}
+.theme-btn svg {
+	grid-area: 1 / 1;
+	width: 15px;
+	height: 15px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+}
+.theme-btn .i-moon {
+	display: none;
+}
+
+/* 暗いテーマのときは「明るくする」意図のアイコンを見せる */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) .theme-btn .i-sun {
+		display: none;
+	}
+	:root:not([data-theme='light']) .theme-btn .i-moon {
+		display: block;
+	}
+}
+:root[data-theme='dark'] .theme-btn .i-sun {
+	display: none;
+}
+:root[data-theme='dark'] .theme-btn .i-moon {
+	display: block;
+}
+:root[data-theme='light'] .theme-btn .i-sun {
+	display: block;
+}
+:root[data-theme='light'] .theme-btn .i-moon {
+	display: none;
+}
+
+/* ---- 検索結果 ---- */
+
+.result {
+	display: block;
+	padding: 0.5rem 0.5rem 0.5625rem;
+	border-radius: 6px;
+	text-decoration: none;
+	color: inherit;
+}
+.result:hover,
+.result.is-cursor {
+	background: var(--shell-2);
+}
+.result.is-cursor {
+	box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.result-title {
+	display: block;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--ink);
+	line-height: 1.4;
+}
+.result-path {
+	display: block;
+	font-size: 0.6875rem;
+	color: var(--ink-3);
+	margin-top: 0.0625rem;
+}
+.result-snip {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--ink-2);
+	margin-top: 0.25rem;
+	line-height: 1.55;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.result mark {
+	background: var(--mark);
+	color: inherit;
+	border-radius: 2px;
+}
+.results-empty {
+	padding: 1rem 0.5rem;
+	font-size: 0.8125rem;
+	color: var(--ink-3);
+}
+
+/* ================================================================ 紙 (main) */
+
+.main {
+	min-width: 0;
+	overflow-y: auto;
+	background: var(--paper);
+}
+
+.topbar {
+	display: none;
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: color-mix(in srgb, var(--paper) 88%, transparent);
+	backdrop-filter: saturate(1.4) blur(8px);
+	border-bottom: 1px solid var(--rule);
+}
+.icon-btn {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	background: none;
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--ink-2);
+}
+.icon-btn svg {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.4;
+	stroke-linecap: round;
+}
+.icon-btn:hover {
+	color: var(--ink);
+	border-color: var(--accent-line);
+}
+.topbar-title {
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--ink-2);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.doc {
+	display: grid;
+	grid-template-columns: minmax(0, var(--sheet-w));
+	gap: var(--gutter);
+	justify-content: center;
+	padding: 4.5rem 3rem 9rem;
+}
+
+/* 目次があるときだけ右カラムを確保する。無いページで本文が左に寄らないように。 */
+.doc.has-toc {
+	grid-template-columns: minmax(0, var(--sheet-w)) var(--toc-w);
+}
+
+/* ---- ノートの頭 ---- */
+
+.crumbs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.3125rem;
+	margin-bottom: 1.125rem;
+	font-size: 0.75rem;
+	color: var(--ink-3);
+}
+.crumbs a {
+	color: var(--ink-3);
+	text-decoration: none;
+}
+.crumbs a:hover {
+	color: var(--accent);
+}
+.crumbs .sep {
+	color: var(--rule);
+}
+
+.doc-head {
+	margin-bottom: 2.5rem;
+}
+
+.doc-head h1 {
+	margin: 0;
+	font-family: var(--font-read);
+	font-weight: 600;
+	font-size: clamp(1.875rem, 1.5rem + 1.3vw, 2.4rem);
+	line-height: 1.25;
+	letter-spacing: -0.012em;
+	text-wrap: balance;
+	color: var(--ink);
+}
+
+.doc-summary {
+	margin: 0.875rem 0 0;
+	font-family: var(--font-read);
+	font-size: 1.0625rem;
+	line-height: 1.7;
+	color: var(--ink-2);
+	max-width: 34em;
+}
+
+.doc-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4375rem;
+	margin-top: 1.25rem;
+	padding-top: 1.125rem;
+	border-top: 1px solid var(--rule-soft);
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3125rem;
+	padding: 0.1875rem 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--rule);
+	font-size: 0.6875rem;
+	font-weight: 450;
+	letter-spacing: 0.01em;
+	color: var(--ink-2);
+	white-space: nowrap;
+}
+.chip-date {
+	font-variant-numeric: tabular-nums;
+}
+.chip-tag {
+	color: var(--accent);
+	border-color: var(--accent-line);
+	background: var(--accent-soft);
+}
+.chip-status-done {
+	color: var(--ok);
+	border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+	background: var(--ok-soft);
+}
+.chip-status-wip {
+	color: var(--warn);
+	border-color: color-mix(in srgb, var(--warn) 35%, transparent);
+	background: var(--warn-soft);
+}
+.chip-src {
+	color: var(--ink-3);
+	border-style: dashed;
+}
+
+/* ---- 本文 ---- */
+
+.prose {
+	font-family: var(--font-read);
+	font-size: var(--read-size);
+	line-height: var(--read-lead);
+	color: var(--ink);
+	font-variant-numeric: oldstyle-nums proportional-nums;
+}
+
+.prose > * {
+	margin-block: 0;
+}
+.prose > * + * {
+	margin-top: 1.15em;
+}
+
+.prose h2,
+.prose h3,
+.prose h4 {
+	font-family: var(--font-read);
+	font-weight: 600;
+	line-height: 1.35;
+	letter-spacing: -0.008em;
+	color: var(--ink);
+	text-wrap: balance;
+	scroll-margin-top: 2rem;
+	position: relative;
+}
+.prose > h2 {
+	margin-top: 2.75em;
+	font-size: 1.4375rem;
+}
+.prose > h3 {
+	margin-top: 2.1em;
+	font-size: 1.1875rem;
+}
+.prose > h4 {
+	margin-top: 1.8em;
+	font-size: 1.0625rem;
+	color: var(--ink-2);
+}
+.prose > h2 + *,
+.prose > h3 + *,
+.prose > h4 + * {
+	margin-top: 0.7em;
+}
+
+.anchor {
+	position: absolute;
+	left: -1.15em;
+	top: 0;
+	width: 1.15em;
+	font-family: var(--font-ui);
+	font-weight: 400;
+	font-size: 0.8em;
+	line-height: inherit;
+	color: var(--ink-3);
+	text-decoration: none;
+	opacity: 0;
+	transition: opacity 0.12s ease;
+}
+.prose h2:hover .anchor,
+.prose h3:hover .anchor,
+.prose h4:hover .anchor,
+.anchor:focus-visible {
+	opacity: 1;
+}
+.anchor:hover {
+	color: var(--accent);
+}
+
+.prose a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-decoration-thickness: 0.055em;
+	text-underline-offset: 0.18em;
+	text-decoration-color: var(--accent-line);
+}
+.prose a:hover {
+	color: var(--accent-hover);
+	text-decoration-color: currentColor;
+}
+
+.prose strong {
+	font-weight: 600;
+	color: var(--ink);
+}
+.prose em {
+	font-style: italic;
+}
+
+.prose ul,
+.prose ol {
+	padding-left: 1.5em;
+}
+.prose li + li {
+	margin-top: 0.4em;
+}
+.prose li > ul,
+.prose li > ol {
+	margin-top: 0.4em;
+}
+.prose ol {
+	font-variant-numeric: tabular-nums;
+}
+.prose ul {
+	list-style: none;
+}
+.prose ul > li {
+	position: relative;
+}
+.prose ul > li::before {
+	content: '';
+	position: absolute;
+	left: -1em;
+	top: calc(var(--read-lead) * 0.5em - 2px);
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--ink-3);
+}
+.prose li::marker {
+	color: var(--ink-3);
+}
+
+.prose hr {
+	margin-block: 2.5em;
+	border: 0;
+	border-top: 1px solid var(--rule);
+}
+
+.prose img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	border-radius: 6px;
+	border: 1px solid var(--rule);
+}
+
+/* ---- 引用と callout ---- */
+
+.prose blockquote {
+	margin-inline: 0;
+	padding: 0.1em 0 0.1em 1.25em;
+	border-left: 2px solid var(--rule);
+	color: var(--ink-2);
+}
+.prose blockquote > * + * {
+	margin-top: 0.7em;
+}
+
+.prose .callout {
+	padding: 1rem 1.125rem;
+	border: 1px solid var(--rule);
+	border-left-width: 3px;
+	border-radius: 6px;
+	background: var(--shell);
+	color: var(--ink);
+	font-size: 0.96em;
+}
+.callout-title {
+	font-family: var(--font-ui);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--ink-2);
+	margin: 0 0 0.5em;
+}
+.callout-note,
+.callout-important,
+.callout-question {
+	border-left-color: var(--accent);
+	background: var(--accent-soft);
+}
+.callout-note .callout-title,
+.callout-important .callout-title,
+.callout-question .callout-title {
+	color: var(--accent);
+}
+.callout-tip {
+	border-left-color: var(--ok);
+	background: var(--ok-soft);
+}
+.callout-tip .callout-title {
+	color: var(--ok);
+}
+.callout-warning,
+.callout-caution {
+	border-left-color: var(--warn);
+	background: var(--warn-soft);
+}
+.callout-warning .callout-title,
+.callout-caution .callout-title {
+	color: var(--warn);
+}
+.callout-todo {
+	border-left-color: var(--ink-3);
+}
+.callout-todo .callout-title {
+	color: var(--ink-3);
+}
+
+/* ---- コード ---- */
+
+.prose code {
+	font-family: var(--font-mono);
+	font-size: 0.855em;
+	font-variant-numeric: normal;
+	background: var(--shell-2);
+	border-radius: 3px;
+	padding: 0.15em 0.35em;
+	overflow-wrap: anywhere;
+}
+.prose a code {
+	color: inherit;
+}
+
+.code-block {
+	position: relative;
+	background: var(--code-bg);
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+}
+.code-block pre {
+	margin: 0;
+	padding: 0.9375rem 1.0625rem;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+}
+.code-block code {
+	display: block;
+	background: none;
+	padding: 0;
+	border-radius: 0;
+	font-size: 0.8125rem;
+	line-height: 1.7;
+	color: var(--ink);
+	tab-size: 2;
+}
+.code-lang {
+	position: absolute;
+	top: 0.5rem;
+	right: 4.25rem;
+	font-family: var(--font-ui);
+	font-size: 0.625rem;
+	font-weight: 500;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+	pointer-events: none;
+}
+.code-copy {
+	position: absolute;
+	top: 0.375rem;
+	right: 0.375rem;
+	padding: 0.1875rem 0.4375rem;
+	background: var(--paper);
+	border: 1px solid var(--rule);
+	border-radius: 4px;
+	font-family: var(--font-ui);
+	font-size: 0.6875rem;
+	color: var(--ink-2);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.12s ease;
+}
+.code-block:hover .code-copy,
+.code-copy:focus-visible {
+	opacity: 1;
+}
+.code-copy:hover {
+	color: var(--accent);
+	border-color: var(--accent-line);
+}
+.code-copy.is-done {
+	color: var(--ok);
+	border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+}
+
+.t-comment {
+	color: var(--t-comment);
+	font-style: italic;
+}
+.t-string {
+	color: var(--t-string);
+}
+.t-keyword {
+	color: var(--t-keyword);
+	font-weight: 500;
+}
+.t-number {
+	color: var(--t-number);
+}
+.t-fn {
+	color: var(--t-fn);
+}
+.t-meta {
+	color: var(--t-meta);
+}
+
+/* ---- 表 ---- */
+
+.table-wrap {
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+}
+.prose table {
+	border-collapse: collapse;
+	width: 100%;
+	font-family: var(--font-ui);
+	font-size: 0.8125rem;
+	line-height: 1.6;
+	font-variant-numeric: tabular-nums;
+}
+.prose th,
+.prose td {
+	padding: 0.5rem 0.75rem;
+	border-bottom: 1px solid var(--rule-soft);
+	text-align: left;
+	vertical-align: top;
+}
+.prose th {
+	font-weight: 600;
+	font-size: 0.6875rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-2);
+	border-bottom: 1px solid var(--rule);
+	white-space: nowrap;
+}
+.prose tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+/* ---- 数式 ---- */
+
+.prose math {
+	font-size: 1.04em;
+	color: var(--ink);
+}
+.prose math.tml-display {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	width: 100%;
+	margin-block: 1.6em;
+	padding-bottom: 2px;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-x: contain;
+	font-size: 1.1em;
+}
+.math-error {
+	background: var(--warn-soft);
+	color: var(--warn);
+	border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+}
+
+/* ---- 前後ナビ ---- */
+
+.pager {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	margin-top: 5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--rule);
+}
+.pager a {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.75rem 0.9375rem;
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+	text-decoration: none;
+	color: var(--ink);
+}
+.pager a:hover {
+	border-color: var(--accent-line);
+	background: var(--shell);
+}
+.pager .dir {
+	font-size: 0.6875rem;
+	font-weight: 500;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+}
+.pager .name {
+	font-size: 0.875rem;
+	font-weight: 450;
+	line-height: 1.4;
+}
+.pager .next {
+	text-align: right;
+	grid-column: 2;
+}
+
+/* ---- 目次 ---- */
+
+.toc {
+	position: sticky;
+	top: 4.5rem;
+	align-self: start;
+	max-height: calc(100dvh - 8rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding-left: 1.25rem;
+	border-left: 1px solid var(--rule-soft);
+}
+.toc-head {
+	margin: 0 0 0.75rem;
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+}
+.toc ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.toc a {
+	display: block;
+	padding: 0.25rem 0;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	color: var(--ink-3);
+	text-decoration: none;
+	border-left: 2px solid transparent;
+	margin-left: -1.3125rem;
+	padding-left: 1.3125rem;
+}
+.toc a:hover {
+	color: var(--ink);
+}
+.toc a.is-current {
+	color: var(--accent);
+	border-left-color: var(--accent);
+}
+.toc .lv3 {
+	padding-left: 2.0625rem;
+}
+.toc .lv4 {
+	padding-left: 2.75rem;
+}
+
+/* ---- セクション目次 (index.md を持つ階層の子一覧) ---- */
+
+.children {
+	display: grid;
+	gap: 0.5rem;
+	margin-top: 2.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--rule);
+}
+.children-head {
+	font-family: var(--font-ui);
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+	margin-bottom: 0.25rem;
+}
+.child {
+	display: flex;
+	align-items: baseline;
+	gap: 0.625rem;
+	padding: 0.625rem 0.875rem;
+	border: 1px solid var(--rule);
+	border-radius: 7px;
+	text-decoration: none;
+	color: var(--ink);
+	font-family: var(--font-ui);
+}
+.child:hover {
+	border-color: var(--accent-line);
+	background: var(--shell);
+}
+.child-name {
+	font-size: 0.875rem;
+	font-weight: 450;
+	line-height: 1.45;
+}
+.child-kind {
+	margin-left: auto;
+	font-size: 0.6875rem;
+	color: var(--ink-3);
+	white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ レスポンシブ */
+
+@media (max-width: 1180px) {
+	.doc.has-toc {
+		grid-template-columns: minmax(0, var(--sheet-w));
+	}
+	.toc {
+		display: none;
+	}
+}
+
+/* 覆い面は広い画面では出さない。狭い画面でドロワーが開いたときだけ現れる。 */
+.scrim {
+	display: none;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+	.app {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.topbar {
+		display: flex;
+	}
+	.nav {
+		position: fixed;
+		inset: 0 auto 0 0;
+		z-index: 40;
+		width: min(var(--nav-w), 84vw);
+		transform: translateX(-100%);
+		transition: transform 0.2s ease;
+	}
+	/* JavaScript が無い経路。:target だけでドロワーが開く。 */
+	.nav:target {
+		transform: none;
+		box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+	}
+	.nav:target ~ .scrim {
+		display: block;
+		position: fixed;
+		/* ドロワーの下までは伸ばさない。覆い面の見えている範囲がそのまま「閉じる」領域になる。 */
+		inset: 0 0 0 min(var(--nav-w), 84vw);
+		z-index: 30;
+		background: rgba(10, 12, 16, 0.35);
+	}
+
+	/* ハイドレーション後はこちらが勝つ。クライアント遷移では :target が更新されないため。 */
+	.nav.is-closed {
+		transform: translateX(-100%);
+		box-shadow: none;
+	}
+	.nav.is-closed ~ .scrim {
+		display: none;
+	}
+	.nav.is-open {
+		transform: none;
+		box-shadow: 0 0 40px rgba(0, 0, 0, 0.18);
+	}
+	.nav.is-open ~ .scrim {
+		display: block;
+		position: fixed;
+		/* ドロワーの下までは伸ばさない。覆い面の見えている範囲がそのまま「閉じる」領域になる。 */
+		inset: 0 0 0 min(var(--nav-w), 84vw);
+		z-index: 30;
+		background: rgba(10, 12, 16, 0.35);
+	}
+	.doc {
+		padding: 2.5rem 1.5rem 8rem;
+	}
+	.code-copy {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+	}
+}
+
+/* ---------------------------------------------------------------- 印刷 */
+
+@media print {
+	.nav,
+	.topbar,
+	.toc,
+	.pager,
+	.anchor,
+	.code-copy,
+	.skip {
+		display: none !important;
+	}
+	.app {
+		display: block;
+		height: auto;
+	}
+	.main {
+		overflow: visible;
+	}
+	.doc {
+		display: block;
+		padding: 0;
+		max-width: none;
+	}
+	body {
+		background: #fff;
+		color: #000;
+	}
+	.code-block,
+	.prose table {
+		break-inside: avoid;
+	}
+}
