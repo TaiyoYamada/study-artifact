@@ -57,7 +57,29 @@ function extractLinks(markdown) {
 	return [...found];
 }
 
+/**
+ * DOI は publisher のサイトを叩かずに、DOI 側の公式 API で登録の有無を見る。
+ * ACM や IEEE は CI の IP からのアクセスを 403 で弾くため、
+ * そちらに頼ると「実在するのに落ちる」ことになる。
+ */
+async function probeDoi(url) {
+	const doi = url.replace(/^https?:\/\/(dx\.)?doi\.org\//, '');
+	try {
+		const response = await fetch(`https://doi.org/api/handles/${doi}`, {
+			signal: AbortSignal.timeout(20_000)
+		});
+		if (!response.ok) return { ok: false, status: response.status };
+		const body = await response.json();
+		// responseCode 1 = 登録あり、100 = そんな handle は無い
+		return body.responseCode === 1 ? { ok: true, status: 200 } : { ok: false, status: 404 };
+	} catch (error) {
+		return { ok: false, status: 0, error: String(error.message ?? error) };
+	}
+}
+
 async function probe(url) {
+	if (/^https?:\/\/(dx\.)?doi\.org\//.test(url)) return probeDoi(url);
+
 	// HEAD を弾くサイトがあるので、失敗したら GET で確かめ直す
 	for (const method of ['HEAD', 'GET']) {
 		try {
@@ -75,6 +97,11 @@ async function probe(url) {
 			if (response.ok) return { ok: true, status: response.status };
 			// 405/403 は方法の問題なので GET で試す価値がある
 			if (method === 'HEAD' && [403, 405, 501].includes(response.status)) continue;
+			// 出版社のサイトは CI の IP をボットとして弾く。サーバーが応答している
+			// 以上「存在しない」とは言えないので、落とさず保留として報告する。
+			if ([401, 403, 429].includes(response.status)) {
+				return { ok: false, blocked: true, status: response.status };
+			}
 			return { ok: false, status: response.status };
 		} catch (error) {
 			if (method === 'GET') return { ok: false, status: 0, error: String(error.message ?? error) };
@@ -106,6 +133,7 @@ if (!asJson) {
 }
 
 const failures = [];
+const blocked = [];
 const CONCURRENCY = 8;
 
 for (let i = 0; i < queue.length; i += CONCURRENCY) {
@@ -114,7 +142,11 @@ for (let i = 0; i < queue.length; i += CONCURRENCY) {
 
 	for (const [url, result] of results) {
 		cache[url] = { ok: result.ok, status: result.status, checkedAt: now };
-		if (!result.ok) {
+		if (result.blocked) {
+			blocked.push({ url, status: result.status, files: targets.get(url) });
+			if (!asJson)
+				console.log(`  ? ${result.status}  ${url}  (アクセス制限。存在は否定されていない)`);
+		} else if (!result.ok) {
 			failures.push({ url, status: result.status, error: result.error, files: targets.get(url) });
 			if (!asJson) console.log(`  ✗ ${result.status || 'ERR'}  ${url}`);
 		}
@@ -125,9 +157,16 @@ mkdirSync(dirname(CACHE_FILE), { recursive: true });
 writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
 
 if (asJson) {
-	console.log(JSON.stringify({ files: files.length, links: targets.size, failures }, null, 2));
+	console.log(
+		JSON.stringify({ files: files.length, links: targets.size, failures, blocked }, null, 2)
+	);
 } else if (failures.length === 0) {
 	console.log(`✓ リンク切れなし`);
+	if (blocked.length) {
+		console.log(
+			`  (${blocked.length} 件は配信元がアクセスを制限しており未確認。DOI があれば DOI で書くと確実)`
+		);
+	}
 } else {
 	console.log(`\n✗ ${failures.length} 件が到達できません:`);
 	for (const f of failures) {
