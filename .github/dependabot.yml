@@ -7,6 +7,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # @sveltejs/kit の peerDependencies は typescript "^5.3.3 || ^6.0.0"。
+      # SvelteKit 側が 7 系に対応するまでメジャーは上げない (npm ci が解決できない)。
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     groups:
       # SvelteKit まわりは足並みを揃えて上げたい
       svelte:
