@@ -105,7 +105,8 @@ async function probe(url) {
 			return { ok: false, status: response.status };
 		} catch (error) {
 			const cause = error?.cause;
-			const message = [error?.message, cause?.message ?? cause?.code].filter(Boolean).join(': ') || String(error);
+			const message =
+				[error?.message, cause?.message ?? cause?.code].filter(Boolean).join(': ') || String(error);
 			// リダイレクトが循環する配信元がある（同意画面やロケール判定で起きる）。
 			// サーバーは応答しているので「存在しない」とは言えず、保留として報告する。
 			if (/redirect count exceeded/i.test(message)) {
