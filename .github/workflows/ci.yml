@@ -98,6 +98,20 @@ jobs:
           name: site
           path: build
 
+      # 初回のみ効く。既にあれば失敗するが、それは正常なので握りつぶす。
+      # ダッシュボードで作る場合は Direct Upload を選ぶこと (Git 連携にすると
+      # Cloudflare 側も勝手にビルドしようとして二重になる)。
+      - name: Pages プロジェクトが無ければ作る
+        if: steps.creds.outputs.ready == 'true'
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages project create ${{ vars.CLOUDFLARE_PROJECT_NAME || 'study-notes' }}
+            --production-branch main
+
       - name: 公開
         id: publish
         if: steps.creds.outputs.ready == 'true'
