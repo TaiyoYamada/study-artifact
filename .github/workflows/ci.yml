@@ -103,19 +103,38 @@ jobs:
           name: site
           path: build
 
-      # 初回のみ効く。既にあれば失敗するが、それは正常なので握りつぶす。
+      # 初回の立ち上げだけで効く。既にあるときは何もしない。
+      # 作成を無条件に試すと毎回 API が「同名がある」と返し、成功した実行にも
+      # 赤い注釈が残って本物の失敗と見分けがつかなくなるため、先に有無を見る。
       # ダッシュボードで作る場合は Direct Upload を選ぶこと (Git 連携にすると
       # Cloudflare 側も勝手にビルドしようとして二重になる)。
       - name: Pages プロジェクトが無ければ作る
         if: steps.creds.outputs.ready == 'true'
-        continue-on-error: true
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: >-
-            pages project create ${{ vars.CLOUDFLARE_PROJECT_NAME || 'study-notes' }}
-            --production-branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'study-notes' }}
+        run: |
+          set -uo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100"
+          body=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
+          # 一覧が取れなかったときに missing と誤判定しないよう、success を先に見る
+          state=$(printf '%s' "$body" | jq -r --arg name "$PROJECT" '
+            if (.success // false) | not then "unknown"
+            elif [(.result // [])[].name] | index($name) then "exists"
+            else "missing" end
+          ' 2>/dev/null || echo unknown)
+          # 応答が空だと jq は何も出さずに終わるので、その場合も unknown に寄せる
+          state=${state:-unknown}
+          case "$state" in
+            exists)
+              echo "::notice::Pages プロジェクト $PROJECT は既にあります。作成は飛ばしました。" ;;
+            missing)
+              echo "Pages プロジェクト $PROJECT を作ります。"
+              npx --yes wrangler@4 pages project create "$PROJECT" --production-branch main ;;
+            *)
+              echo "::warning::Pages プロジェクトの有無を確認できませんでした。公開はそのまま試みます。" ;;
+          esac
 
       - name: 公開
         id: publish
