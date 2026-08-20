@@ -116,25 +116,19 @@ jobs:
           PROJECT: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'study-notes' }}
         run: |
           set -uo pipefail
-          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=100"
-          body=$(curl -sS --max-time 30 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" || true)
-          # 一覧が取れなかったときに missing と誤判定しないよう、success を先に見る
-          state=$(printf '%s' "$body" | jq -r --arg name "$PROJECT" '
-            if (.success // false) | not then "unknown"
-            elif [(.result // [])[].name] | index($name) then "exists"
-            else "missing" end
-          ' 2>/dev/null || echo unknown)
-          # 応答が空だと jq は何も出さずに終わるので、その場合も unknown に寄せる
-          state=${state:-unknown}
-          case "$state" in
-            exists)
-              echo "::notice::Pages プロジェクト $PROJECT は既にあります。作成は飛ばしました。" ;;
-            missing)
-              echo "Pages プロジェクト $PROJECT を作ります。"
-              npx --yes wrangler@4 pages project create "$PROJECT" --production-branch main ;;
-            *)
-              echo "::warning::Pages プロジェクトの有無を確認できませんでした。公開はそのまま試みます。" ;;
-          esac
+          # 公開と同じ経路 (wrangler + 同じ権限) で見る。REST を直接叩くと
+          # トークンに一覧の権限が要り、公開できるのに確認だけ失敗することがある。
+          if ! listing=$(npx --yes wrangler@4 pages project list 2>&1); then
+            echo "::warning::Pages プロジェクトの一覧を取得できませんでした。公開はそのまま試みます。"
+            echo "$listing" | tail -20
+            exit 0
+          fi
+          if printf '%s' "$listing" | grep -qE "(^|[^-[:alnum:]_])${PROJECT}([^-[:alnum:]_]|$)"; then
+            echo "Pages プロジェクト $PROJECT は既にあります。作成は飛ばしました。"
+            exit 0
+          fi
+          echo "Pages プロジェクト $PROJECT が無いので作ります。"
+          npx --yes wrangler@4 pages project create "$PROJECT" --production-branch main
 
       - name: 公開
         id: publish
