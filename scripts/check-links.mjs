@@ -77,7 +77,34 @@ async function probeDoi(url) {
 	}
 }
 
+/**
+ * ネットワーク側の一時的な失敗かどうか。
+ *
+ * 名前が引けない (ENOTFOUND) のは「そんなドメインは無い」ということなので、
+ * 捏造した URL を捕まえるためにも落とす側に残す。
+ * 一方、名前は引けるのに TCP が張れない・切られるのは、配信元が
+ * CI の IP を黙って落としている場合が多く、存在の否定にはならない。
+ */
+const TRANSIENT = /timeout|timed out|econnreset|econnrefused|socket hang up|network|fetch failed/i;
+const DNS_FAILURE = /enotfound|eai_again|getaddrinfo/i;
+
 async function probe(url) {
+	let last;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		last = await probeOnce(url);
+		if (last.ok || last.blocked) return last;
+		// HTTP の応答が返っているならサーバーの答えなので、繰り返しても変わらない
+		if (last.status > 0) return last;
+		if (DNS_FAILURE.test(last.error ?? '')) return last;
+		if (!TRANSIENT.test(last.error ?? '')) return last;
+		await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+	}
+	// 3 回とも接続できなかった。サーバーが黙っているだけかもしれないので、
+	// リンク切れとは断定せず保留として報告する。
+	return { ...last, blocked: true };
+}
+
+async function probeOnce(url) {
 	if (/^https?:\/\/(dx\.)?doi\.org\//.test(url)) return probeDoi(url);
 
 	// HEAD を弾くサイトがあるので、失敗したら GET で確かめ直す

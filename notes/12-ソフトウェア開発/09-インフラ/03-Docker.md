@@ -71,5 +71,5 @@ package.json だけ先にコピー → 依存のインストールをキャッ�
 ## 参考文献
 
 - Docker Documentation. <https://docs.docker.com/>
-- Dirk Merkel. Docker: Lightweight Linux Containers for Consistent Development and Deployment. *Linux Journal* 2014(239), 2014. <https://dl.acm.org/doi/10.5555/2600239.2600241>
+- Dirk Merkel. Docker: Lightweight Linux Containers for Consistent Development and Deployment. *Linux Journal* 2014(239), 2014. <https://www.linuxjournal.com/content/docker-lightweight-linux-containers-consistent-development-and-deployment>
 - Open Container Initiative. Image Format Specification. <https://github.com/opencontainers/image-spec>
